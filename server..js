@@ -3,10 +3,12 @@ const express = require("express");
 const handlebars = require("express-handlebars");
 const routes = require("./src/routes/routes");
 const UserModel = require("./src/models/usuarios");
+
 const { fork } = require('child_process');
+
 //const TwitterUserModel = require("./src/models/twitterUsuario");
 //const mongoStore = require('connect-mongo')
-const { TIEMPO_EXPIRACION,secret } = require("./src/config/globals");
+const { TIEMPO_EXPIRACION, secret } = require("./src/config/globals");
 const { validatePass } = require("./src/utils/passValidator");
 const { createHash } = require("./src/utils/hashGenerator");
 
@@ -88,8 +90,8 @@ passport.use(
 
 passport.use(
     "signup",
-    new LocalStrategy({ passReqToCallback: true }, (req,username,password, done) => {
-        UserModel.findOne({username:username}, (err, user) => {
+    new LocalStrategy({ passReqToCallback: true }, (req, username, password, done) => {
+        UserModel.findOne({ username: username }, (err, user) => {
             if (err) {
                 console.log("Error de signup" + err);
                 return done(err);
@@ -101,7 +103,7 @@ passport.use(
             console.log(req.body);
 
             const newUser = {
-               username:username,
+                username: username,
                 password: createHash(password),
             };
             console.log(newUser);
@@ -144,8 +146,8 @@ app.get("/faillogin", routes.getFailLogin);
 ////
 app.get('/signup', routes.getSignup);
 app.post('/signup', passport.authenticate('signup',
- { failureRedirect: "/failsignup" }
- ), routes.postSignup);
+    { failureRedirect: "/failsignup" }
+), routes.postSignup);
 app.get('/failsignup', routes.getFailSignup);
 
 app.get("/logout", routes.getLogout);
@@ -159,22 +161,22 @@ app.get("/info", routes.getInfo);
 
 
 
-app.get("/random", (req,res)=>{
-    // let numeros=0;
-    // if(req.query.n){
-    //     numeros= req.query.n;
-    // }else{numeros=100000000}
-    
-    app.on('request', (req, res) => {
+app.get("/random", (req, res) => {
+    let numeros = 0;
 
-          const randoms = fork('./randoms.js')
-           randoms.send('start');
-            randoms.on('message', sum => {
-                res.end(`La suma es ${sum}`)
-        })
-    
+    if (req.query.cant==undefined) {
+        numeros = 100000000;
+    } else { numeros = req.query.cant; }
+
+
+    const randoms = fork('./randoms.js')
+    randoms.send(numeros);
+    randoms.on('message', nums => {
+        res.end(` ${nums}`)
+        
     })
-});
+    })
+
 
 
 app.get("*", routes.failRoute);
@@ -182,14 +184,14 @@ app.get("*", routes.failRoute);
 
 
 
-const options = {default:{puerto: "8080"},alias: {  p: 'puerto', _: 'otros' }}
+const options = { default: { puerto: "8080" }, alias: { p: 'puerto', _: 'otros' } }
 
 
-const args =parseArgs(process.argv.slice(2),options);
-PORT=args.puerto;
+const args = parseArgs(process.argv.slice(2), options);
+PORT = args.puerto;
 console.log(PORT);
 const server = app.listen(PORT, () => {
-    console.log("Server on port "+PORT);
+    console.log("Server on port " + PORT);
 });
 
 server.on("error", (error) => console.log("Error en el servidor"));
