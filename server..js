@@ -1,5 +1,6 @@
 const session = require("express-session");
 const express = require("express");
+const cluster = require("cluster");
 const handlebars = require("express-handlebars");
 const routes = require("./src/routes/routes");
 const UserModel = require("./src/models/usuarios");
@@ -16,6 +17,7 @@ const { isValidObjectId, connect } = require("mongoose");
 const dotenv = require('dotenv')
 dotenv.config();
 const passport = require("passport");
+const numCPUs = require("os").cpus().length;
 const LocalStrategy = require("passport-local").Strategy;
 //const TwitterStrategy = require("passport-twitter").Strategy;
 //const bCrypt = require("bcrypt");
@@ -23,6 +25,7 @@ const mongoose = require("mongoose");
 //const twitterUsuario = require("./src/models/twitterUsuario");
 
 const parseArgs = require('minimist');
+
 
 const app = express();
 
@@ -164,7 +167,7 @@ app.get("/info", routes.getInfo);
 app.get("/random", (req, res) => {
     let numeros = 0;
 
-    if (req.query.cant==undefined) {
+    if (req.query.cant == undefined) {
         numeros = 100000000;
     } else { numeros = req.query.cant; }
 
@@ -173,9 +176,9 @@ app.get("/random", (req, res) => {
     randoms.send(numeros);
     randoms.on('message', nums => {
         res.end(` ${nums}`)
-        
+
     })
-    })
+})
 
 
 
@@ -184,14 +187,36 @@ app.get("*", routes.failRoute);
 
 
 
-const options = { default: { puerto: "8080" }, alias: { p: 'puerto', _: 'otros' } }
+const options = { default: { puerto: "8080", modo:"FORK"}, alias: {m:'modo', p: 'puerto', _: 'otros' } }
+
 
 
 const args = parseArgs(process.argv.slice(2), options);
 PORT = args.puerto;
 console.log(PORT);
-const server = app.listen(PORT, () => {
-    console.log("Server on port " + PORT);
-});
+console.log(args.modo);
+if (args.modo === 'FORK') {
+    const server = app.listen(PORT, () => {
+        console.log("Server on port " + PORT+' modo '+ args.modo);
+    });
 
-server.on("error", (error) => console.log("Error en el servidor"));
+    server.on("error", (error) => console.log("Error en el servidor"));
+} else if(args.modo === 'CLUSTER'){
+    if (cluster.isMaster) {
+        console.log('PID Master ' + process.pid);
+        for (let index = 0; index < numCPUs; index++) {
+            cluster.fork();
+
+        }
+        cluster.on('exit', worker => {
+            console.log('PID Worker died');
+        })
+    }
+    else {
+        let server = app.listen(PORT, (req, res) => {
+            console.log("Server on port " + PORT + ' cluster ');
+          //  console.log(cluster.process.id);
+
+        });
+    }
+}

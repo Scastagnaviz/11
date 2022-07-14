@@ -1,6 +1,6 @@
 const parseArgs = require('minimist');
 const { fork } = require('child_process');
-
+const numCPUs = require("os").cpus().length;
 function getRoot(req, res) {
     if (req.isAuthenticated()) {
         res.redirect('profile')
@@ -86,6 +86,7 @@ function getTwitterPage(req,res){
     res.render('twitterPage');
 }
 function getInfo(req,res){
+  
     const args =parseArgs(process.argv.slice(2))
     const exec = process.execPath;
     const os =process.platform;
@@ -102,6 +103,7 @@ function getInfo(req,res){
         path:exec,
         Id_Proceso: pid,
         carpeta: dir,
+        cpu: numCPUs
     }
     res.render('info',{datos: datos});
 }
